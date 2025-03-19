@@ -51,8 +51,11 @@ func (g *CLIProjectGenerator) Generate() (map[string]string, []string, error) {
 	}
 
 	fileTemplates := map[string]string{
-		"cmd/root/root.go":          "cli/root.tpl",
-		"cmd/version/version.go":    "cli/version.tpl",
+		"main.go":                   "cli/main.tpl",
+		"go.mod":                    "cli/go-mod.tpl",
+		"README.md":                 "cli/readme.tpl",
+		"cmd/root.go":               "cli/root.tpl",
+		"cmd/version.go":            "cli/version.tpl",
 		"internal/commands/cmd.go":  "cli/commands.tpl",
 		"internal/config/config.go": "cli/config.tpl",
 		"internal/utils/utils.go":   "cli/utils.tpl",

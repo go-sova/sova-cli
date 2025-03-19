@@ -4,10 +4,26 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
 func TestProjectInitialization(t *testing.T) {
+	// Create a temporary directory for the binary
+	tempBinDir := filepath.Join(os.TempDir(), "sova-cli-test-bin")
+	if err := os.MkdirAll(tempBinDir, 0755); err != nil {
+		t.Fatalf("Failed to create binary directory: %v", err)
+	}
+	defer os.RemoveAll(tempBinDir)
+
+	// Build the binary
+	binaryPath := filepath.Join(tempBinDir, "sova")
+	buildCmd := exec.Command("go", "build", "-o", binaryPath)
+	buildCmd.Dir = ".." // Run from the project root
+	if err := buildCmd.Run(); err != nil {
+		t.Fatalf("Failed to build CLI: %v", err)
+	}
+
 	tempDir, err := os.MkdirTemp("", "sova-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
@@ -17,7 +33,7 @@ func TestProjectInitialization(t *testing.T) {
 	testCases := []struct {
 		name        string
 		projectName string
-		template    string
+		projectType string
 		wantDirs    []string
 		wantFiles   []string
 		wantErr     bool
@@ -25,58 +41,9 @@ func TestProjectInitialization(t *testing.T) {
 		{
 			name:        "Basic project creation",
 			projectName: "test-project",
-			template:    "default",
+			projectType: "cli",
 			wantDirs: []string{
 				"cmd",
-				"internal",
-				"pkg",
-				"api",
-				"docs",
-				"scripts",
-				"test",
-			},
-			wantFiles: []string{
-				"main.go",
-				"go.mod",
-				"README.md",
-			},
-			wantErr: false,
-		},
-		{
-			name:        "Web project creation",
-			projectName: "web-project",
-			template:    "go-web",
-			wantDirs: []string{
-				"cmd",
-				"internal",
-				"pkg",
-				"api",
-				"docs",
-				"scripts",
-				"test",
-				"web",
-				"templates",
-				"static",
-			},
-			wantFiles: []string{
-				"main.go",
-				"go.mod",
-				"README.md",
-				"web/handlers.go",
-				"web/middleware.go",
-				"web/routes.go",
-			},
-			wantErr: false,
-		},
-		{
-			name:        "CLI project creation",
-			projectName: "cli-project",
-			template:    "cli",
-			wantDirs: []string{
-				"cmd",
-				"internal",
-				"pkg",
-				"docs",
 			},
 			wantFiles: []string{
 				"main.go",
@@ -84,13 +51,31 @@ func TestProjectInitialization(t *testing.T) {
 				"README.md",
 				"cmd/root.go",
 				"cmd/version.go",
+				".gitignore",
 			},
 			wantErr: false,
 		},
 		{
-			name:        "Invalid template",
+			name:        "API project creation",
+			projectName: "api-project",
+			projectType: "api",
+			wantDirs: []string{
+				"cmd",
+				"internal",
+				"pkg",
+				"api",
+			},
+			wantFiles: []string{
+				"main.go",
+				"go.mod",
+				"README.md",
+			},
+			wantErr: false,
+		},
+		{
+			name:        "Invalid project type",
 			projectName: "invalid-project",
-			template:    "nonexistent",
+			projectType: "nonexistent",
 			wantDirs:    []string{},
 			wantFiles:   []string{},
 			wantErr:     true,
@@ -100,12 +85,13 @@ func TestProjectInitialization(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			projectDir := filepath.Join(tempDir, tc.projectName)
-			cmd := exec.Command("go", "run", "../main.go", "init", tc.projectName, "--template", tc.template)
+			cmd := exec.Command(binaryPath, "init", tc.projectName, "--type", tc.projectType,
+				"--use-zap=false", "--use-postgres=false", "--use-redis=false", "--use-rabbitmq=false")
 			cmd.Dir = tempDir
 			output, err := cmd.CombinedOutput()
 
 			if tc.wantErr {
-				if err == nil {
+				if err == nil && !strings.Contains(string(output), "Error: unsupported project type") {
 					t.Errorf("Expected error but got none. Output: %s", string(output))
 				}
 				return

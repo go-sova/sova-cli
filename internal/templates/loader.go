@@ -26,4 +26,4 @@ func (l *TemplateLoader) LoadTemplate(name string) (*template.Template, error) {
 
 func (l *TemplateLoader) LoadTemplateWithFuncs(name string, funcs template.FuncMap) (*template.Template, error) {
 	return template.New(name).Funcs(funcs).ParseFiles(name)
-} 
+}
