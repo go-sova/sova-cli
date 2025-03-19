@@ -3,10 +3,18 @@ package cli
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/go-sova/sova-cli/pkg/questions"
 	"github.com/spf13/cobra"
+)
+
+var (
+	useZap      bool
+	usePostgres bool
+	useRedis    bool
+	useRabbitMQ bool
 )
 
 var InitCmd = &cobra.Command{
@@ -29,13 +37,13 @@ This command will create a new directory with the project name and set up all ne
 			return
 		}
 
-		answers, err := questions.AskProjectQuestions("cli")
-		if err != nil {
-			fmt.Printf("Error: failed to get project configuration: %v\n", err)
-			return
+		answers := &questions.ProjectAnswers{
+			ProjectName: projectName,
+			UseZap:      useZap,
+			UsePostgres: usePostgres,
+			UseRedis:    useRedis,
+			UseRabbitMQ: useRabbitMQ,
 		}
-
-		answers.ProjectName = projectName
 
 		generator := NewCLIProjectGenerator(projectName, projectDir, answers)
 
@@ -59,13 +67,28 @@ This command will create a new directory with the project name and set up all ne
 			return
 		}
 
+		// Initialize and tidy up the Go module
+		tidyCmd := exec.Command("go", "mod", "tidy")
+		tidyCmd.Dir = projectDir
+		if output, err := tidyCmd.CombinedOutput(); err != nil {
+			fmt.Printf("Error: failed to run go mod tidy: %v\nOutput: %s\n", err, output)
+			return
+		}
+
 		fmt.Printf("\nProject %s created successfully!\n", projectName)
 		fmt.Println("\nNext steps:")
-		fmt.Printf("1. cd %s\n", projectName)
-		fmt.Println("2. go mod tidy")
-		fmt.Println("3. go run main.go")
+		fmt.Printf(" cd %s\n", projectName)
+		fmt.Println("go mod tidy")
+		fmt.Println("go run main.go")
 		fmt.Println("\nTry your CLI commands:")
 		fmt.Printf("   ./%s command1\n", projectName)
 		fmt.Printf("   ./%s command2\n", projectName)
 	},
+}
+
+func init() {
+	InitCmd.Flags().BoolVar(&useZap, "use-zap", false, "Use zap logger")
+	InitCmd.Flags().BoolVar(&usePostgres, "use-postgres", false, "Use PostgreSQL")
+	InitCmd.Flags().BoolVar(&useRedis, "use-redis", false, "Use Redis")
+	InitCmd.Flags().BoolVar(&useRabbitMQ, "use-rabbitmq", false, "Use RabbitMQ")
 }

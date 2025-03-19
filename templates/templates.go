@@ -52,7 +52,7 @@ func (l *TemplateLoader) LoadTemplate(name string) (*template.Template, error) {
 			return tmpl, nil
 		}
 	}
-	
+
 	return nil, fmt.Errorf("template not found: %s", name)
 }
 
@@ -129,4 +129,4 @@ func GetTemplateFS() fs.FS {
 // GetTemplatePath returns the path to a specific template within the embedded filesystem
 func GetTemplatePath(category, name string) string {
 	return filepath.Join(category, name)
-} 
+}

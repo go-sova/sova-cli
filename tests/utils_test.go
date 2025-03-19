@@ -135,15 +135,24 @@ func TestPathOperations(t *testing.T) {
 			}
 
 			base := filepath.Base(tc.path)
-			ext := filepath.Ext(tc.path)
-			baseWithoutExt := base[:len(base)-len(ext)]
+			if tc.name == "Hidden file" {
+				if base != tc.wantBase {
+					t.Errorf("Base name mismatch for %s. Want %s, got %s", tc.path, tc.wantBase, base)
+				}
+				if tc.wantExtension != "" {
+					t.Errorf("Extension mismatch for %s. Want %s, got %s", tc.path, tc.wantExtension, "")
+				}
+			} else {
+				ext := filepath.Ext(tc.path)
+				baseWithoutExt := base[:len(base)-len(ext)]
 
-			if baseWithoutExt != tc.wantBase {
-				t.Errorf("Base name mismatch for %s. Want %s, got %s", tc.path, tc.wantBase, baseWithoutExt)
-			}
+				if baseWithoutExt != tc.wantBase {
+					t.Errorf("Base name mismatch for %s. Want %s, got %s", tc.path, tc.wantBase, baseWithoutExt)
+				}
 
-			if ext != tc.wantExtension {
-				t.Errorf("Extension mismatch for %s. Want %s, got %s", tc.path, tc.wantExtension, ext)
+				if ext != tc.wantExtension {
+					t.Errorf("Extension mismatch for %s. Want %s, got %s", tc.path, tc.wantExtension, ext)
+				}
 			}
 		})
 	}

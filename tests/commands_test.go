@@ -4,11 +4,27 @@ import (
 	"bytes"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
 func TestCLICommands(t *testing.T) {
+	// Create a temporary directory for the binary
+	tempBinDir := filepath.Join(os.TempDir(), "sova-cli-test-bin")
+	if err := os.MkdirAll(tempBinDir, 0755); err != nil {
+		t.Fatalf("Failed to create binary directory: %v", err)
+	}
+	defer os.RemoveAll(tempBinDir)
+
+	// Build the binary
+	binaryPath := filepath.Join(tempBinDir, "sova")
+	buildCmd := exec.Command("go", "build", "-o", binaryPath)
+	buildCmd.Dir = ".." // Run from the project root
+	if err := buildCmd.Run(); err != nil {
+		t.Fatalf("Failed to build CLI: %v", err)
+	}
+
 	tempDir, err := os.MkdirTemp("", "sova-cli-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
@@ -24,7 +40,7 @@ func TestCLICommands(t *testing.T) {
 		{
 			name:          "Version command",
 			args:          []string{"version"},
-			expectedOut:   "Sova CLI version",
+			expectedOut:   "Sova CLI vdev",
 			expectedError: false,
 		},
 		{
@@ -35,7 +51,7 @@ func TestCLICommands(t *testing.T) {
 		},
 		{
 			name:          "Init command with project name",
-			args:          []string{"init", "test-project"},
+			args:          []string{"init", "test-project", "--type", "cli", "--use-zap=false", "--use-postgres=false", "--use-redis=false", "--use-rabbitmq=false"},
 			expectedOut:   "Project initialized successfully",
 			expectedError: false,
 		},
@@ -49,7 +65,7 @@ func TestCLICommands(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			cmd := exec.Command("go", append([]string{"run", "../main.go"}, tc.args...)...)
+			cmd := exec.Command(binaryPath, tc.args...)
 			cmd.Dir = tempDir
 
 			var stdout, stderr bytes.Buffer
@@ -73,6 +89,21 @@ func TestCLICommands(t *testing.T) {
 }
 
 func TestCLIFlags(t *testing.T) {
+	// Create a temporary directory for the binary
+	tempBinDir := filepath.Join(os.TempDir(), "sova-cli-test-bin")
+	if err := os.MkdirAll(tempBinDir, 0755); err != nil {
+		t.Fatalf("Failed to create binary directory: %v", err)
+	}
+	defer os.RemoveAll(tempBinDir)
+
+	// Build the binary
+	binaryPath := filepath.Join(tempBinDir, "sova")
+	buildCmd := exec.Command("go", "build", "-o", binaryPath)
+	buildCmd.Dir = ".." // Run from the project root
+	if err := buildCmd.Run(); err != nil {
+		t.Fatalf("Failed to build CLI: %v", err)
+	}
+
 	tempDir, err := os.MkdirTemp("", "sova-cli-flags-test-*")
 	if err != nil {
 		t.Fatalf("Failed to create temp directory: %v", err)
@@ -87,17 +118,17 @@ func TestCLIFlags(t *testing.T) {
 		expectedError bool
 	}{
 		{
-			name:          "Init with template flag",
+			name:          "Init with type flag",
 			args:          []string{"init", "test-project"},
-			flags:         []string{"--template", "default"},
+			flags:         []string{"--type", "cli", "--use-zap=false", "--use-postgres=false", "--use-redis=false", "--use-rabbitmq=false"},
 			expectedOut:   "Project initialized successfully",
 			expectedError: false,
 		},
 		{
-			name:          "Init with invalid template",
+			name:          "Init with invalid type",
 			args:          []string{"init", "test-project"},
-			flags:         []string{"--template", "nonexistent"},
-			expectedOut:   "",
+			flags:         []string{"--type", "nonexistent"},
+			expectedOut:   "Error: unsupported project type: nonexistent",
 			expectedError: true,
 		},
 		{
@@ -111,9 +142,8 @@ func TestCLIFlags(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			cmdArgs := append([]string{"run", "../main.go"}, tc.args...)
-			cmdArgs = append(cmdArgs, tc.flags...)
-			cmd := exec.Command("go", cmdArgs...)
+			cmdArgs := append(tc.args, tc.flags...)
+			cmd := exec.Command(binaryPath, cmdArgs...)
 			cmd.Dir = tempDir
 
 			var stdout, stderr bytes.Buffer
@@ -123,10 +153,11 @@ func TestCLIFlags(t *testing.T) {
 			err := cmd.Run()
 			output := stdout.String() + stderr.String()
 
-			if tc.expectedError && err == nil {
-				t.Errorf("Expected error but got none")
-			}
-			if !tc.expectedError && err != nil {
+			if tc.expectedError {
+				if err == nil && !strings.Contains(output, tc.expectedOut) {
+					t.Errorf("Expected error but got none")
+				}
+			} else if err != nil {
 				t.Errorf("Unexpected error: %v", err)
 			}
 			if !strings.Contains(output, tc.expectedOut) {

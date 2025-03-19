@@ -40,6 +40,9 @@ func (g *APIProjectGenerator) SetLogger(logger *utils.Logger) {
 func (g *APIProjectGenerator) Generate() (map[string]string, []string, error) {
 	dirs := []string{
 		"cmd",
+		"internal",
+		"pkg",
+		"api",
 		"internal/server",
 		"internal/service",
 		"internal/handlers",
@@ -48,6 +51,8 @@ func (g *APIProjectGenerator) Generate() (map[string]string, []string, error) {
 	}
 
 	fileTemplates := map[string]string{
+		"main.go":                       "api/main.tpl",
+		"README.md":                     "api/readme.tpl",
 		"cmd/main.go":                   "api/main.tpl",
 		"internal/server/server.go":     "api/server.tpl",
 		"internal/routes/routes.go":     "api/routes.tpl",
